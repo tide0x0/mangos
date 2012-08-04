@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,8 @@ enum WorldTimers
     WUPDATE_CORPSES     = 3,
     WUPDATE_EVENTS      = 4,
     WUPDATE_DELETECHARS = 5,
-    WUPDATE_COUNT       = 6
+    WUPDATE_AHBOT       = 6,
+    WUPDATE_COUNT       = 7
 };
 
 /// Configuration elements
@@ -116,6 +117,9 @@ enum eConfigUInt32Values
     CONFIG_UINT32_MAX_SPELL_CASTS_IN_CHAIN,
     CONFIG_UINT32_BIRTHDAY_TIME,
     CONFIG_UINT32_MAX_PRIMARY_TRADE_SKILL,
+    CONFIG_UINT32_TRADE_SKILL_GMIGNORE_MAX_PRIMARY_COUNT,
+    CONFIG_UINT32_TRADE_SKILL_GMIGNORE_LEVEL,
+    CONFIG_UINT32_TRADE_SKILL_GMIGNORE_SKILL,
     CONFIG_UINT32_MIN_PETITION_SIGNS,
     CONFIG_UINT32_GM_LOGIN_STATE,
     CONFIG_UINT32_GM_VISIBLE_STATE,
@@ -148,8 +152,6 @@ enum eConfigUInt32Values
     CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY,
     CONFIG_UINT32_CREATURE_FAMILY_FLEE_DELAY,
     CONFIG_UINT32_WORLD_BOSS_LEVEL_DIFF,
-    CONFIG_UINT32_QUEST_LOW_LEVEL_HIDE_DIFF,
-    CONFIG_UINT32_QUEST_HIGH_LEVEL_HIDE_DIFF,
     CONFIG_UINT32_QUEST_DAILY_RESET_HOUR,
     CONFIG_UINT32_QUEST_WEEKLY_RESET_WEEK_DAY,
     CONFIG_UINT32_QUEST_WEEKLY_RESET_HOUR,
@@ -195,6 +197,8 @@ enum eConfigInt32Values
     CONFIG_INT32_DEATH_SICKNESS_LEVEL = 0,
     CONFIG_INT32_ARENA_STARTRATING,
     CONFIG_INT32_ARENA_STARTPERSONALRATING,
+    CONFIG_INT32_QUEST_LOW_LEVEL_HIDE_DIFF,
+    CONFIG_INT32_QUEST_HIGH_LEVEL_HIDE_DIFF,
     CONFIG_INT32_VALUE_COUNT
 };
 
@@ -328,6 +332,7 @@ enum eConfigBoolValues
     CONFIG_BOOL_CLEAN_CHARACTER_DB,
     CONFIG_BOOL_VMAP_INDOOR_CHECK,
     CONFIG_BOOL_PET_UNSUMMON_AT_MOUNT,
+    CONFIG_BOOL_MMAP_ENABLED,
     CONFIG_BOOL_VALUE_COUNT
 };
 
@@ -593,7 +598,6 @@ class World
         void setConfig(eConfigInt32Values index, char const* fieldname, int32 defvalue);
         void setConfig(eConfigFloatValues index, char const* fieldname, float defvalue);
         void setConfig(eConfigBoolValues index, char const* fieldname, bool defvalue);
-        void setConfigPos(eConfigUInt32Values index, char const* fieldname, uint32 defvalue);
         void setConfigPos(eConfigFloatValues index, char const* fieldname, float defvalue);
         void setConfigMin(eConfigUInt32Values index, char const* fieldname, uint32 defvalue, uint32 minvalue);
         void setConfigMin(eConfigInt32Values index, char const* fieldname, int32 defvalue, int32 minvalue);

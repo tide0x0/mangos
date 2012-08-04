@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ bool Totem::Create(uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* 
     if (InstanceData* iData = GetMap()->GetInstanceData())
         iData->OnCreatureCreate(this);
 
-    LoadCreatureAddon();
+    LoadCreatureAddon(false);
 
     return true;
 }
@@ -204,6 +204,19 @@ bool Totem::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex 
                 return true;
             default:
                 break;
+        }
+
+        if (!IsPositiveSpell(spellInfo))
+        {
+            // immune to all negative auras
+            if (IsAuraApplyEffect(spellInfo, index))
+                return true;
+        }
+        else
+        {
+            // immune to any type of regeneration auras hp/mana etc.
+            if (IsPeriodicRegenerateEffect(spellInfo, index))
+                return true;
         }
     }
 
