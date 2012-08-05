@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1129,12 +1129,12 @@ namespace MaNGOS
     class NearestCreatureEntryWithLiveStateInObjectRangeCheck
     {
         public:
-            NearestCreatureEntryWithLiveStateInObjectRangeCheck(WorldObject const& obj,uint32 entry, bool onlyAlive, bool onlyDead, float range)
-                : i_obj(obj), i_entry(entry), i_onlyAlive(onlyAlive), i_onlyDead(onlyDead), i_range(range) {}
+            NearestCreatureEntryWithLiveStateInObjectRangeCheck(WorldObject const& obj,uint32 entry, bool alive, float range)
+                : i_obj(obj), i_entry(entry), i_alive(alive), i_range(range) {}
             WorldObject const& GetFocusObject() const { return i_obj; }
             bool operator()(Creature* u)
             {
-                if (u->GetEntry() == i_entry && (i_onlyAlive && u->isAlive() || i_onlyDead && u->IsCorpse() || !i_onlyAlive && !i_onlyDead) && i_obj.IsWithinDistInMap(u, i_range))
+                if (u->GetEntry() == i_entry && (i_alive && u->isAlive() || !i_alive && u->IsCorpse()) && i_obj.IsWithinDistInMap(u, i_range))
                 {
                     i_range = i_obj.GetDistance(u);         // use found unit range as new range limit for next check
                     return true;
@@ -1145,8 +1145,7 @@ namespace MaNGOS
         private:
             WorldObject const& i_obj;
             uint32 i_entry;
-            bool   i_onlyAlive;
-            bool   i_onlyDead;
+            bool   i_alive;
             float  i_range;
 
             // prevent clone this object

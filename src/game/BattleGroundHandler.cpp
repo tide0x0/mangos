@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -288,10 +288,6 @@ void WorldSession::HandlePVPLogDataOpcode( WorldPacket & /*recv_data*/ )
 
     BattleGround *bg = _player->GetBattleGround();
     if (!bg)
-        return;
-
-    // arena finish version will send in BattleGround::EndBattleGround directly
-    if (bg->isArena())
         return;
 
     WorldPacket data;

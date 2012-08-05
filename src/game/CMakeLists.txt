@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2005-2012 MaNGOS project <http://getmangos.com/>
+# Copyright (C) 2005-2011 MaNGOS project <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,7 @@ file(GLOB_RECURSE game_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.h)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/vmap
-  ${CMAKE_CURRENT_SOURCE_DIR}/AuctionHouseBot
   ${CMAKE_SOURCE_DIR}/dep/include/g3dlite
-  ${CMAKE_SOURCE_DIR}/dep/recastnavigation/Detour
-  ${CMAKE_SOURCE_DIR}/dep/recastnavigation/
   ${CMAKE_SOURCE_DIR}/dep/include
   ${CMAKE_SOURCE_DIR}/src/shared
   ${CMAKE_SOURCE_DIR}/src/framework
@@ -44,7 +41,7 @@ source_group("World/Handlers"
 )
 
 source_group("Motion generators"
-  REGULAR_EXPRESSION MoveMap|MoveMapSharedDefines|Generator|MotionMaster
+  REGULAR_EXPRESSION Movement|Holder|Motion|Traveller
 )
 
 source_group("Server"
@@ -67,13 +64,6 @@ source_group("References"
   REGULAR_EXPRESSION Reference|RefManager|ThreatManager
 )
 
-source_group("Movement"
-  REGULAR_EXPRESSION spline|Spline|packet_builder
-  FILES
-    movement/typedefs.h
-    movement/util.cpp
-)
-
 if(PCH)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
@@ -84,7 +74,6 @@ add_library(game STATIC
 
 target_link_libraries(game
   shared
-  detour
 )
 
 if(UNIX)

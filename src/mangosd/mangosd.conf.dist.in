@@ -168,15 +168,6 @@ BindIP = "0.0.0.0"
 #        More distance let have better performence, less distance let have more sensitive reaction at target move.
 #        Default: 1.5
 #
-#    mmap.enabled
-#        Enable/Disable pathfinding using mmaps
-#        Default: 1 (enable)
-#                 0 (disable)
-#
-#    mmap.ignoreMapIds
-#        Disable mmap pathfinding on the listed maps.
-#        List of map ids with delimiter ','
-#
 #    UpdateUptimeInterval
 #        Update realm uptime period in minutes (for save data in 'uptime' table). Must be > 0
 #        Default: 10 (minutes)
@@ -218,8 +209,6 @@ vmap.ignoreSpellIds = "7720"
 vmap.enableIndoorCheck = 1
 DetectPosCollision = 1
 TargetPosRecalculateRange = 1.5
-mmap.enabled = 1
-mmap.ignoreMapIds = ""
 UpdateUptimeInterval = 10
 MaxCoreStuckTime = 0
 AddonChannel = 1
@@ -271,7 +260,6 @@ CleanCharacterDB = 1
 #    LogFilter_VisibilityChanges
 #    LogFilter_Weather
 #    LogFilter_DbStrictedCheck
-#    LogFilter_Pathfinding
 #        Log filters (active by default)
 #        Default: 1 - not include with any log level
 #                 0 - include in log if log level permit
@@ -290,8 +278,7 @@ CleanCharacterDB = 1
 #
 #    WorldLogFile
 #        Packet logging file for the worldserver
-#        Default: ""          - no log file created
-#                 "world.log" - recommended name to create a log file
+#        Default: "world.log"
 #
 #    WorldLogTimestamp
 #        Logfile with timestamp of server start in name
@@ -362,7 +349,6 @@ LogFilter_TransportMoves = 1
 LogFilter_VisibilityChanges = 1
 LogFilter_Weather = 1
 LogFilter_DbStrictedCheck = 1
-LogFilter_Pathfinding = 1
 LogFilter_PeriodicAffects = 0
 LogFilter_PlayerMoves = 0
 LogFilter_SQLText = 0
@@ -679,18 +665,6 @@ LogColors = ""
 #        Default: 2
 #        Max : 10
 #
-#    TradeSkill.GMIgnore.MaxPrimarySkillsCount
-#        GM level starting from max primary skill count requirement ignored.
-#        Default: 4 (Console as noneone)
-#
-#    TradeSkill.GMIgnore.Level
-#        GM level starting from trade skill level requirement ignored.
-#        Default: 4 (Console as noneone)
-#
-#    TradeSkill.GMIgnore.Skill
-#        GM level starting from trade skill skill requirement ignored.
-#        Default: 4 (Console as noneone)
-#
 #    MinPetitionSigns
 #        Min signatures count to creating guild (0..9).
 #        Default: 9
@@ -814,9 +788,6 @@ TimerBar.Breath.Max = 180
 TimerBar.Fire.GMLevel = 4
 TimerBar.Fire.Max = 1
 MaxPrimaryTradeSkill = 2
-TradeSkill.GMIgnore.MaxPrimarySkillsCount = 4
-TradeSkill.GMIgnore.Level = 4
-TradeSkill.GMIgnore.Skill = 4
 MinPetitionSigns = 9
 MaxGroupXPDistance = 74
 MailDeliveryDelay = 3600
@@ -960,11 +931,11 @@ TalentsInspecting = 1
 #
 #    ListenRange.Say
 #        Distance from player to listen text that creature (or other world object) say
-#        Default: 40
+#        Default: 25
 #
 #    ListenRange.TextEmote
 #        Distance from player to listen textemote that creature (or other world object) say
-#        Default: 40
+#        Default: 25
 #
 #    ListenRange.Yell
 #        Distance from player to listen text that creature (or other world object) yell

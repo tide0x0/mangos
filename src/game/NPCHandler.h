@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,11 +69,9 @@ struct GossipTextOption
     QEmote Emotes[3];
 };
 
-#define MAX_GOSSIP_TEXT_OPTIONS 8
-
 struct GossipText
 {
-    GossipTextOption Options[MAX_GOSSIP_TEXT_OPTIONS];
+    GossipTextOption Options[8];
 };
 
 #endif

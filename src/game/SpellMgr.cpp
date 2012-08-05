@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,18 +269,6 @@ uint16 GetSpellAuraMaxTicks(SpellEntry const* spellInfo)
     }
 
     return 6;
-}
-
-uint16 GetSpellAuraMaxTicks(uint32 spellId)
-{
-    SpellEntry const* spellInfo = sSpellStore.LookupEntry(spellId);
-    if (!spellInfo)
-    {
-        sLog.outError("GetSpellAuraMaxTicks: Spell %u not exist!", spellId);
-        return 1;
-    }
-
-    return GetSpellAuraMaxTicks(spellInfo);
 }
 
 float CalculateDefaultCoefficient(SpellEntry const *spellProto, DamageEffectType const damagetype)
@@ -718,7 +706,6 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case SPELL_EFFECT_SKILL_STEP:
         case SPELL_EFFECT_HEAL_PCT:
         case SPELL_EFFECT_ENERGIZE_PCT:
-        case SPELL_EFFECT_QUEST_COMPLETE:
             return true;
 
             // non-positive aura use
@@ -1448,46 +1435,6 @@ void SpellMgr::LoadSpellProcItemEnchant()
     sLog.outString( ">> Loaded %u proc item enchant definitions", count );
 }
 
-bool IsCastEndProcModifierAura(SpellEntry const *spellInfo, SpellEffectIndex effecIdx, SpellEntry const *procSpell)
-{
-    SpellEffectEntry const* effectEntry = spellInfo->GetSpellEffect(effecIdx);
-    AuraType aurNameReal = AuraType(effectEntry ? effectEntry->EffectApplyAuraName : SPELL_AURA_NONE);
-    if(!aurNameReal || !effectEntry)
-        return false;
-
-    // modifier auras that can proc on cast end
-    switch (aurNameReal)
-    {
-        case SPELL_AURA_ADD_FLAT_MODIFIER:
-        case SPELL_AURA_ADD_PCT_MODIFIER:
-        {
-            switch (spellInfo->GetEffectMiscValue(effecIdx))
-            {
-                case SPELLMOD_RANGE:
-                case SPELLMOD_RADIUS:
-                case SPELLMOD_NOT_LOSE_CASTING_TIME:
-                case SPELLMOD_CASTING_TIME:
-                case SPELLMOD_COOLDOWN:
-                case SPELLMOD_COST:
-                case SPELLMOD_GLOBAL_COOLDOWN:
-                    return true;
-                default:
-                    break;
-            }
-        }
-        case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:
-        {
-            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-                if (IsEffectHandledOnDelayedSpellLaunch(procSpell, SpellEffectIndex(i)))
-                    return true;
-
-            return false;
-        }
-        default:
-            return false;
-    }
-}
-
 struct DoSpellBonuses
 {
     DoSpellBonuses(SpellBonusMap& _spellBonusMap, SpellBonusEntry const& _spellBonus) : spellBonusMap(_spellBonusMap), spellBonus(_spellBonus) {}
@@ -1709,8 +1656,8 @@ bool SpellMgr::IsSpellProcEventCanTriggeredBy(SpellProcEventEntry const * spellP
         if (EventProcFlag & (PROC_FLAG_ON_DO_PERIODIC | PROC_FLAG_ON_TAKE_PERIODIC) && (procExtra & PROC_EX_PERIODIC_POSITIVE))
             return false;
 
-        // No extra req, so can trigger for (damage/healing present) and cast end/hit/crit
-        if (procExtra & (PROC_EX_CAST_END|PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT))
+        // No extra req, so can trigger for (damage/healing present) and hit/crit
+        if(procExtra & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT))
             return true;
     }
     else // all spells hits here only if resist/reflect/immune/evade
@@ -1982,11 +1929,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     if (spellInfo_1->SpellIconID == 2606 && spellInfo_2->SpellIconID == 2606)
                         return false;
 
-                    // Mirrored Soul (FoS - Devourer) - and other Boss spells
-                    if (spellInfo_1->SpellIconID == 3176 && spellInfo_2->SpellIconID == 3176)
-                        return false;
-
-
                     // Brood Affliction: Bronze
                     if ((spellInfo_1->Id == 23170 && spellInfo_2->Id == 23171) ||
                         (spellInfo_2->Id == 23170 && spellInfo_1->Id == 23171))
@@ -2032,11 +1974,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
                     // Vigilance and Damage Reduction (Vigilance triggered spell)
                     if (spellInfo_1->SpellIconID == 2834 && spellInfo_2->SpellIconID == 2834)
-                        return false;
-
-                    // Unstable Sphere Timer and Unstable Sphere Passive
-                    if ((spellInfo_1->Id == 50758 && spellInfo_2->Id == 50756) ||
-                        (spellInfo_2->Id == 50758 && spellInfo_1->Id == 50756))
                         return false;
 
                     break;
@@ -2350,10 +2287,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
                 // Bestial Wrath
                 if (spellInfo_1->SpellIconID == 1680 && spellInfo_2->SpellIconID == 1680)
-                    return false;
-
-                // Aspect of the Viper & Vicious Viper
-                if (spellInfo_1->SpellIconID == 2227 && spellInfo_2->SpellIconID == 2227)
                     return false;
             }
 
@@ -4096,16 +4029,6 @@ SpellCastResult SpellMgr::GetSpellAllowedInLocationError(SpellEntry const *spell
             BattleGround* bg = player->GetBattleGround();
             return bg && bg->GetStatus()==STATUS_WAIT_JOIN ? SPELL_CAST_OK : SPELL_FAILED_ONLY_IN_ARENA;
         }
-        case 74410:                                         // Arena - Dampening
-            return player && player->InArena() ? SPELL_CAST_OK : SPELL_FAILED_ONLY_IN_ARENA;
-        case 74411:                                         // Battleground - Dampening
-        {
-            if (!player)
-                return SPELL_FAILED_ONLY_BATTLEGROUNDS;
-
-            BattleGround* bg = player->GetBattleGround();
-            return bg && !bg->isArena() ? SPELL_CAST_OK : SPELL_FAILED_ONLY_BATTLEGROUNDS;
-        }
     }
 
     return SPELL_CAST_OK;
@@ -4464,13 +4387,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
                 return DIMINISHING_LIMITONLY;
             break;
         }
-        case SPELLFAMILY_PALADIN:
-        {
-            // Judgement of Justice - Limit to 10 seconds in PvP
-            if (classOptions && classOptions->SpellFamilyFlags & UI64LIT(0x00000100000))
-                return DIMINISHING_LIMITONLY;
-            break;
-        }
         case SPELLFAMILY_DRUID:
         {
             // Cyclone
@@ -4522,7 +4438,7 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
         return DIMINISHING_DISORIENT;
     if (mechanic & (1<<(MECHANIC_ROOT-1)))
         return triggered ? DIMINISHING_TRIGGER_ROOT : DIMINISHING_CONTROL_ROOT;
-    if (mechanic & ((1<<(MECHANIC_FEAR-1))|(1<<(MECHANIC_CHARM-1))|(1<<(MECHANIC_TURN-1))))
+    if (mechanic & ((1<<(MECHANIC_FEAR-1))|(1<<(MECHANIC_CHARM-1))))
         return DIMINISHING_FEAR_CHARM_BLIND;
     if (mechanic & ((1<<(MECHANIC_SILENCE-1))|(1<<(MECHANIC_INTERRUPT-1))))
         return DIMINISHING_SILENCE;
@@ -4685,7 +4601,7 @@ SpellEntry const* GetSpellEntryByDifficulty(uint32 id, Difficulty difficulty, bo
     for (Difficulty diff = difficulty; diff >= REGULAR_DIFFICULTY; diff = GetPrevDifficulty(diff, isRaid))
     {
         if (spellDiff->spellId[diff])
-            return sSpellStore.LookupEntry(spellDiff->spellId[diff]);
+            return sSpellStore.LookupEntry(spellDiff->spellId[difficulty]);
     }
 
     return NULL;

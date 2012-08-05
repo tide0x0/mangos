@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -286,22 +286,31 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
 
     DETAIL_LOG("STORAGE: Item Query = %u", item);
 
-    ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(item);
-    if (pProto)
+    ItemPrototype const *pProto = ObjectMgr::GetItemPrototype( item );
+    if( pProto )
     {
+        std::string Name        = pProto->Name1;
+        std::string Description = pProto->Description;
+
         int loc_idx = GetSessionDbLocaleIndex();
-
-        std::string name = pProto->Name1;
-        std::string description = pProto->Description;
-        sObjectMgr.GetItemLocaleStrings(pProto->ItemId, loc_idx, &name, &description);
-
+        if ( loc_idx >= 0 )
+        {
+            ItemLocale const *il = sObjectMgr.GetItemLocale(pProto->ItemId);
+            if (il)
+            {
+                if (il->Name.size() > size_t(loc_idx) && !il->Name[loc_idx].empty())
+                    Name = il->Name[loc_idx];
+                if (il->Description.size() > size_t(loc_idx) && !il->Description[loc_idx].empty())
+                    Description = il->Description[loc_idx];
+            }
+        }
                                                             // guess size
         WorldPacket data( SMSG_ITEM_QUERY_SINGLE_RESPONSE, 600);
         data << pProto->ItemId;
         data << pProto->Class;
         data << pProto->SubClass;
         data << int32(pProto->Unk0);                        // new 2.0.3, not exist in wdb cache?
-        data << name;
+        data << Name;
         data << uint8(0x00);                                //pProto->Name2; // blizz not send name there, just uint8(0x00); <-- \0 = empty string = empty name...
         data << uint8(0x00);                                //pProto->Name3; // blizz not send name there, just uint8(0x00);
         data << uint8(0x00);                                //pProto->Name4; // blizz not send name there, just uint8(0x00);
@@ -394,7 +403,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
             }
         }
         data << pProto->Bonding;
-        data << description;
+        data << Description;
         data << pProto->PageText;
         data << pProto->LanguageID;
         data << pProto->PageMaterial;
@@ -798,9 +807,9 @@ void WorldSession::SendListInventory(ObjectGuid vendorguid)
                     // convert if can use and then buy
                     if (pProto->RequiredReputationFaction && uint32(_player->GetReputationRank(pProto->RequiredReputationFaction)) >= pProto->RequiredReputationRank)
                     {
+                        itemId = sObjectMgr.GetItemConvert(itemId, _player->getRaceMask());
                         // checked at convert data loading as existed
-                        if (uint32 newItemId = sObjectMgr.GetItemConvert(itemId, _player->getRaceMask()))
-                            pProto = ObjectMgr::GetItemPrototype(newItemId);
+                        pProto = ObjectMgr::GetItemPrototype(itemId);
                     }
                 }
 
@@ -1075,16 +1084,26 @@ void WorldSession::HandleItemNameQueryOpcode(WorldPacket & recv_data)
     recv_data.read_skip<uint64>();                          // guid
 
     DEBUG_LOG("WORLD: CMSG_ITEM_NAME_QUERY %u", itemid);
-    if (ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(itemid))
+    ItemPrototype const *pProto = ObjectMgr::GetItemPrototype( itemid );
+    if( pProto )
     {
-        int loc_idx = GetSessionDbLocaleIndex();
+        std::string Name;
+        Name = pProto->Name1;
 
-        std::string name = pProto->Name1;
-        sObjectMgr.GetItemLocaleStrings(pProto->ItemId, loc_idx, &name);
+        int loc_idx = GetSessionDbLocaleIndex();
+        if (loc_idx >= 0)
+        {
+            ItemLocale const *il = sObjectMgr.GetItemLocale(pProto->ItemId);
+            if (il)
+            {
+                if (il->Name.size() > size_t(loc_idx) && !il->Name[loc_idx].empty())
+                    Name = il->Name[loc_idx];
+            }
+        }
                                                             // guess size
         WorldPacket data(SMSG_ITEM_NAME_QUERY_RESPONSE, (4+10));
         data << uint32(pProto->ItemId);
-        data << name;
+        data << Name;
         data << uint32(pProto->InventoryType);
         SendPacket(&data);
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -493,8 +493,8 @@ void WorldSession::HandleMailTakeItem(WorldPacket & recv_data )
     Item *it = pl->GetMItem(itemId);
 
     ItemPosCountVec dest;
-    InventoryResult msg = _player->CanStoreItem( NULL_BAG, NULL_SLOT, dest, it, false );
-    if (msg == EQUIP_ERR_OK)
+    uint8 msg = _player->CanStoreItem( NULL_BAG, NULL_SLOT, dest, it, false );
+    if( msg == EQUIP_ERR_OK )
     {
         m->RemoveItem(itemId);
         m->removedItems.push_back(itemId);
@@ -514,7 +514,7 @@ void WorldSession::HandleMailTakeItem(WorldPacket & recv_data )
                     sender_accId = sender->GetSession()->GetAccountId();
                     sender_name = sender->GetName();
                 }
-                else if (sender_guid)
+                else
                 {
                     // can be calculated early
                     sender_accId = sObjectMgr.GetPlayerAccountIdByGUID(sender_guid);
@@ -525,7 +525,7 @@ void WorldSession::HandleMailTakeItem(WorldPacket & recv_data )
                 sLog.outCommand(GetAccountId(), "GM %s (Account: %u) receive mail item: %s (Entry: %u Count: %u) and send COD money: %u to player: %s (Account: %u)",
                     GetPlayerName(), GetAccountId(), it->GetProto()->Name1, it->GetEntry(), it->GetCount(), m->COD, sender_name.c_str(), sender_accId);
             }
-            else if (!sender)
+            else if(!sender)
                 sender_accId = sObjectMgr.GetPlayerAccountIdByGUID(sender_guid);
 
             // check player existence
@@ -771,8 +771,8 @@ void WorldSession::HandleMailCreateTextItem(WorldPacket & recv_data )
     DETAIL_LOG("HandleMailCreateTextItem mailid=%u", mailId);
 
     ItemPosCountVec dest;
-    InventoryResult msg = _player->CanStoreItem( NULL_BAG, NULL_SLOT, dest, bodyItem, false );
-    if (msg == EQUIP_ERR_OK)
+    uint8 msg = _player->CanStoreItem( NULL_BAG, NULL_SLOT, dest, bodyItem, false );
+    if( msg == EQUIP_ERR_OK )
     {
         m->checked = m->checked | MAIL_CHECK_MASK_COPIED;
         m->state = MAIL_STATE_CHANGED;

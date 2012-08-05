@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ enum SpellModType
     SPELLMOD_PCT          = 108                             // SPELL_AURA_ADD_PCT_MODIFIER
 };
 
-// 2^n internal values, they are never sent to the client
+// 2^n values, Player::m_isunderwater is a bitmask. These are mangos internal values, they are never send to any client
 enum PlayerUnderwaterState
 {
     UNDERWATER_NONE                     = 0x00,
@@ -113,6 +113,36 @@ struct PlayerTalent
 
 typedef UNORDERED_MAP<uint32, PlayerSpell> PlayerSpellMap;
 typedef UNORDERED_MAP<uint32, PlayerTalent> PlayerTalentMap;
+
+// Spell modifier (used for modify other spells)
+struct SpellModifier
+{
+    SpellModifier() : charges(0), lastAffected(NULL) {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, uint32 _spellId, uint64 _mask, uint32 _mask2 = 0, int16 _charges = 0)
+        : op(_op), type(_type), charges(_charges), value(_value), mask(_mask, _mask2), spellId(_spellId), lastAffected(NULL)
+    {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, uint32 _spellId, ClassFamilyMask _mask, int16 _charges = 0)
+        : op(_op), type(_type), charges(_charges), value(_value), mask(_mask), spellId(_spellId), lastAffected(NULL)
+    {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, SpellEntry const* spellEntry, SpellEffectIndex eff, int16 _charges = 0);
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, Aura const* aura, int16 _charges = 0);
+
+    bool isAffectedOnSpell(SpellEntry const *spell) const;
+
+    SpellModOp   op   : 8;
+    SpellModType type : 8;
+    int16 charges     : 16;
+    int32 value;
+    ClassFamilyMask mask;
+    uint32 spellId;
+    Spell const* lastAffected;
+};
+
+typedef std::list<SpellModifier*> SpellModList;
 
 struct SpellCooldown
 {
@@ -494,10 +524,6 @@ enum PlayerFieldByteFlags
 enum PlayerFieldByte2Flags
 {
     PLAYER_FIELD_BYTE2_NONE              = 0x00,
-    PLAYER_FIELD_BYTE2_DETECT_AMORE_0    = 0x02,            // SPELL_AURA_DETECT_AMORE, not used as value and maybe not relcted to, but used in code as base for mask apply
-    PLAYER_FIELD_BYTE2_DETECT_AMORE_1    = 0x04,            // SPELL_AURA_DETECT_AMORE value 1
-    PLAYER_FIELD_BYTE2_DETECT_AMORE_2    = 0x08,            // SPELL_AURA_DETECT_AMORE value 2
-    PLAYER_FIELD_BYTE2_DETECT_AMORE_3    = 0x10,            // SPELL_AURA_DETECT_AMORE value 3
     PLAYER_FIELD_BYTE2_STEALTH           = 0x20,
     PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW = 0x40
 };
@@ -1063,12 +1089,13 @@ class MANGOS_DLL_SPEC Player : public Unit
         Creature* GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask);
         GameObject* GetGameObjectIfCanInteractWith(ObjectGuid guid, uint32 gameobject_type = MAX_GAMEOBJECT_TYPE) const;
 
-        void ToggleAFK();
-        void ToggleDND();
+        bool ToggleAFK();
+        bool ToggleDND();
         bool isAFK() const { return HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK); }
         bool isDND() const { return HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND); }
         uint8 chatTag() const;
-        std::string autoReplyMsg;
+        std::string afkMsg;
+        std::string dndMsg;
 
         uint32 GetBarberShopCost(uint8 newhairstyle, uint8 newhaircolor, uint8 newfacialhair);
 
@@ -1194,18 +1221,18 @@ class MANGOS_DLL_SPEC Player : public Unit
             return _CanStoreItem( bag, slot, dest, pItem->GetEntry(), count, pItem, swap, NULL );
 
         }
-        InventoryResult CanStoreItems(Item **pItem,int count) const;
-        InventoryResult CanEquipNewItem(uint8 slot, uint16 &dest, uint32 item, bool swap) const;
-        InventoryResult CanEquipItem(uint8 slot, uint16 &dest, Item *pItem, bool swap, bool direct_action = true) const;
+        InventoryResult CanStoreItems( Item **pItem,int count) const;
+        InventoryResult CanEquipNewItem( uint8 slot, uint16 &dest, uint32 item, bool swap ) const;
+        InventoryResult CanEquipItem( uint8 slot, uint16 &dest, Item *pItem, bool swap, bool not_loading = true ) const;
 
         InventoryResult CanEquipUniqueItem( Item * pItem, uint8 except_slot = NULL_SLOT, uint32 limit_count = 1 ) const;
         InventoryResult CanEquipUniqueItem( ItemPrototype const* itemProto, uint8 except_slot = NULL_SLOT, uint32 limit_count = 1 ) const;
         InventoryResult CanUnequipItems( uint32 item, uint32 count ) const;
         InventoryResult CanUnequipItem( uint16 src, bool swap ) const;
         InventoryResult CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec& dest, Item *pItem, bool swap, bool not_loading = true ) const;
-        InventoryResult CanUseItem(Item *pItem, bool direct_action = true) const;
-        bool HasItemTotemCategory(uint32 TotemCategory) const;
-        InventoryResult CanUseItem(ItemPrototype const *pItem) const;
+        InventoryResult CanUseItem( Item *pItem, bool not_loading = true ) const;
+        bool HasItemTotemCategory( uint32 TotemCategory ) const;
+        InventoryResult CanUseItem( ItemPrototype const *pItem ) const;
         InventoryResult CanUseAmmo( uint32 item ) const;
         Item* StoreNewItem( ItemPosCountVec const& pos, uint32 item, bool update,int32 randomPropertyId = 0 );
         Item* StoreItem( ItemPosCountVec const& pos, Item *pItem, bool update );
@@ -1217,8 +1244,6 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         void AutoStoreLoot(uint32 loot_id, LootStore const& store, bool broadcast = false, uint8 bag = NULL_BAG, uint8 slot = NULL_SLOT);
         void AutoStoreLoot(Loot& loot, bool broadcast = false, uint8 bag = NULL_BAG, uint8 slot = NULL_SLOT);
-
-        Item* ConvertItem(Item* item, uint32 newItemId);
 
         InventoryResult _CanTakeMoreSimilarItems(uint32 entry, uint32 count, Item* pItem, uint32* no_space_count = NULL) const;
         InventoryResult _CanStoreItem( uint8 bag, uint8 slot, ItemPosCountVec& dest, uint32 entry, uint32 count, Item *pItem = NULL, bool swap = false, uint32* no_space_count = NULL ) const;
@@ -1235,8 +1260,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         {
             return StoreItem( dest, pItem, update);
         }
-        Item* BankItem(uint16 pos, Item *pItem, bool update);
-        void RemoveItem(uint8 bag, uint8 slot, bool update);// see ApplyItemOnStoreSpell notes
+        Item* BankItem( uint16 pos, Item *pItem, bool update );
+        void RemoveItem( uint8 bag, uint8 slot, bool update );
         void MoveItemFromInventory(uint8 bag, uint8 slot, bool update);
                                                             // in trade, auction, guild bank, mail....
         void MoveItemToInventory(ItemPosCountVec const& dest, Item* pItem, bool update, bool in_characterInventoryDB = false);
@@ -1301,10 +1326,6 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         uint32 m_stableSlots;
 
-        uint32 GetEquipGearScore(bool withBags = true, bool withBank = false);
-        void ResetCachedGearScore() { m_cachedGS = 0; }
-        typedef std::vector<uint32/*item level*/> GearScoreVec;
-
         /*********************************************************/
         /***                    GOSSIP SYSTEM                  ***/
         /*********************************************************/
@@ -1313,7 +1334,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SendPreparedGossip(WorldObject *pSource);
         void OnGossipSelect(WorldObject *pSource, uint32 gossipListId, uint32 menuId);
 
-        uint32 GetGossipTextId(uint32 menuId, WorldObject* pSource);
+        uint32 GetGossipTextId(uint32 menuId);
         uint32 GetGossipTextId(WorldObject *pSource);
         uint32 GetDefaultGossipMenuForSource(WorldObject *pSource);
 
@@ -1327,13 +1348,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void PrepareQuestMenu(ObjectGuid guid );
         void SendPreparedQuest(ObjectGuid guid);
         bool IsActiveQuest( uint32 quest_id ) const;        // can be taken or taken
-
-        // Quest is taken and not yet rewarded
-        // if completed_or_not = 0 (or any other value except 1 or 2) - returns true, if quest is taken and doesn't depend if quest is completed or not
-        // if completed_or_not = 1 - returns true, if quest is taken but not completed
-        // if completed_or_not = 2 - returns true, if quest is taken and already completed
-        bool IsCurrentQuest(uint32 quest_id, uint8 completed_or_not = 0) const; // taken and not yet rewarded
-
+        bool IsCurrentQuest( uint32 quest_id ) const;       // taken and not yet rewarded
         Quest const *GetNextQuest(ObjectGuid guid, Quest const *pQuest );
         bool CanSeeStartQuest( Quest const *pQuest ) const;
         bool CanTakeQuest( Quest const *pQuest, bool msg ) const;
@@ -1567,7 +1582,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         bool HasSpell(uint32 spell) const;
         bool HasActiveSpell(uint32 spell) const;            // show in spellbook
-        TrainerSpellState GetTrainerSpellState(TrainerSpell const* trainer_spell, uint32 reqLevel) const;
+        TrainerSpellState GetTrainerSpellState(TrainerSpell const* trainer_spell) const;
         bool IsSpellFitByClassAndRace(uint32 spell_id, uint32* pReqlevel = NULL) const;
         bool IsNeedCastPassiveLikeSpellAtLearn(SpellEntry const* spellInfo) const;
         bool IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const;
@@ -1625,8 +1640,10 @@ class MANGOS_DLL_SPEC Player : public Unit
         PlayerTalent const* GetKnownTalentById(int32 talentId) const;
         SpellEntry const* GetKnownTalentRankById(int32 talentId) const;
 
-        void AddSpellMod(Aura* aura, bool apply);
+        void AddSpellMod(SpellModifier* mod, bool apply);
+        bool IsAffectedBySpellmod(SpellEntry const *spellInfo, SpellModifier *mod, Spell const* spell = NULL);
         template <class T> T ApplySpellMod(uint32 spellId, SpellModOp op, T &basevalue, Spell const* spell = NULL);
+        void RemoveSpellMods(Spell const* spell);
 
         static uint32 const infinityCooldownDelay = MONTH;  // used for set "infinity cooldowns" for spells and check
         static uint32 const infinityCooldownDelayCheck = MONTH/2;
@@ -1828,9 +1845,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void DestroyForPlayer( Player *target, bool anim = false ) const;
         void SendLogXPGain(uint32 GivenXP,Unit* victim,uint32 RestXP);
 
-        uint8 LastSwingErrorMsg() const { return m_swingErrorMsg; }
-        void SwingErrorMsg(uint8 val) { m_swingErrorMsg = val; }
-
         // notifiers
         void SendAttackSwingCantAttack();
         void SendAttackSwingCancelAttack();
@@ -2005,9 +2019,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void UpdateEquipSpellsAtFormChange();
         void CastItemCombatSpell(Unit* Target, WeaponAttackType attType);
         void CastItemUseSpell(Item *item,SpellCastTargets const& targets,uint8 cast_count, uint32 glyphIndex);
-
-        void ApplyItemOnStoreSpell(Item *item, bool apply);
-        void DestroyItemWithOnStoreSpell(Item* item, uint32 spellId);
 
         void SendEquipmentSetList();
         void SetEquipmentSet(uint32 index, EquipmentSet eqset);
@@ -2484,7 +2495,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         float m_armorPenetrationPct;
         int32 m_spellPenetrationItemMod;
 
-        AuraList m_spellMods[MAX_SPELLMOD];
+        SpellModList m_spellMods[MAX_SPELLMOD];
+        int32 m_SpellModRemoveCount;
         EnchantDurationList m_enchantDuration;
         ItemDurationList m_itemDuration;
 
@@ -2600,8 +2612,6 @@ class MANGOS_DLL_SPEC Player : public Unit
                 m_DelayedOperations |= operation;
         }
 
-        void _fillGearScoreData(Item* item, GearScoreVec* gearScore, uint32& twoHandScore);
-
         Unit *m_mover;
         Camera m_camera;
 
@@ -2646,11 +2656,56 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint32 m_timeSyncTimer;
         uint32 m_timeSyncClient;
         uint32 m_timeSyncServer;
-
-        uint32 m_cachedGS;
 };
 
 void AddItemsSetItem(Player*player,Item *item);
 void RemoveItemsSetItem(Player*player,ItemPrototype const *proto);
+
+// "the bodies of template functions must be made available in a header file"
+template <class T> T Player::ApplySpellMod(uint32 spellId, SpellModOp op, T &basevalue, Spell const* spell)
+{
+    SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellId);
+    if (!spellInfo) return 0;
+    int32 totalpct = 0;
+    int32 totalflat = 0;
+    for (SpellModList::iterator itr = m_spellMods[op].begin(); itr != m_spellMods[op].end(); ++itr)
+    {
+        SpellModifier *mod = *itr;
+
+        if(!IsAffectedBySpellmod(spellInfo,mod,spell))
+            continue;
+        if (mod->type == SPELLMOD_FLAT)
+            totalflat += mod->value;
+        else if (mod->type == SPELLMOD_PCT)
+        {
+            // skip percent mods for null basevalue (most important for spell mods with charges )
+            if(basevalue == T(0))
+                continue;
+
+            // special case (skip >10sec spell casts for instant cast setting)
+            if( mod->op==SPELLMOD_CASTING_TIME  && basevalue >= T(10*IN_MILLISECONDS) && mod->value <= -100)
+                continue;
+
+            totalpct += mod->value;
+        }
+
+        if (mod->charges > 0 )
+        {
+            --mod->charges;
+            if (mod->charges == 0)
+            {
+                mod->charges = -1;
+                mod->lastAffected = spell;
+                if(!mod->lastAffected)
+                    mod->lastAffected = FindCurrentSpellBySpellId(spellId);
+                ++m_SpellModRemoveCount;
+            }
+        }
+    }
+
+    float diff = (float)basevalue*(float)totalpct/100.0f + (float)totalflat;
+    basevalue = T((float)basevalue + diff);
+    return T(diff);
+}
 
 #endif

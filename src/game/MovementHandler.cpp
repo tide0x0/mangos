@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -285,6 +285,10 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 
     if (plMover)
         plMover->UpdateFallInformationIfNeed(movementInfo, opcode);
+
+    // after move info set
+    if (opcode == MSG_MOVE_SET_WALK_MODE || opcode == MSG_MOVE_SET_RUN_MODE)
+        mover->UpdateWalkMode(mover, false);
 
     WorldPacket data(opcode, recv_data.size());
     data << mover->GetPackGUID();             // write guid

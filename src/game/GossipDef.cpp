@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,12 +181,14 @@ void PlayerMenu::SendGossipMenu(uint32 TitleTextId, ObjectGuid objectGuid)
         data << int32(pQuest->GetQuestLevel());
         data << uint32(pQuest->GetQuestFlags());            // 3.3.3 quest flags
         data << uint8(0);                                   // 3.3.3 changes icon: blue question or yellow exclamation
+        std::string Title = pQuest->GetTitle();
 
         int loc_idx = GetMenuSession()->GetSessionDbLocaleIndex();
-        std::string title = pQuest->GetTitle();
-        sObjectMgr.GetQuestLocaleStrings(questID, loc_idx, &title);
-
-        data << title;                                      // max 0x200
+        if (loc_idx >= 0)
+            if (QuestLocale const *ql = sObjectMgr.GetQuestLocale(questID))
+                if (ql->Title.size() > (size_t)loc_idx && !ql->Title[loc_idx].empty())
+                    Title = ql->Title[loc_idx];
+        data << Title;                                      // max 0x200
     }
 
     GetMenuSession()->SendPacket( &data );
@@ -270,27 +272,36 @@ void PlayerMenu::SendTalking( uint32 textID )
     }
     else
     {
-        std::string Text_0[MAX_GOSSIP_TEXT_OPTIONS], Text_1[MAX_GOSSIP_TEXT_OPTIONS];
-        for (int i = 0; i < MAX_GOSSIP_TEXT_OPTIONS; ++i)
+        std::string Text_0[8], Text_1[8];
+        for (int i = 0; i < 8; ++i)
         {
             Text_0[i] = pGossip->Options[i].Text_0;
             Text_1[i] = pGossip->Options[i].Text_1;
         }
-
         int loc_idx = GetMenuSession()->GetSessionDbLocaleIndex();
-
-        sObjectMgr.GetNpcTextLocaleStringsAll(textID, loc_idx, &Text_0, &Text_1);
-
-        for (int i = 0; i < MAX_GOSSIP_TEXT_OPTIONS; ++i)
+        if (loc_idx >= 0)
+        {
+            if (NpcTextLocale const *nl = sObjectMgr.GetNpcTextLocale(textID))
+            {
+                for (int i = 0; i < 8; ++i)
+                {
+                    if (nl->Text_0[i].size() > (size_t)loc_idx && !nl->Text_0[i][loc_idx].empty())
+                        Text_0[i] = nl->Text_0[i][loc_idx];
+                    if (nl->Text_1[i].size() > (size_t)loc_idx && !nl->Text_1[i][loc_idx].empty())
+                        Text_1[i] = nl->Text_1[i][loc_idx];
+                }
+            }
+        }
+        for (int i = 0; i < 8; ++i)
         {
             data << pGossip->Options[i].Probability;
 
-            if (Text_0[i].empty())
+            if ( Text_0[i].empty() )
                 data << Text_1[i];
             else
                 data << Text_0[i];
 
-            if (Text_1[i].empty())
+            if ( Text_1[i].empty() )
                 data << Text_0[i];
             else
                 data << Text_1[i];
@@ -394,9 +405,17 @@ void PlayerMenu::SendQuestGiverQuestList(QEmote eEmote, const std::string& Title
 
         if(Quest const *pQuest = sObjectMgr.GetQuestTemplate(questID))
         {
-            int loc_idx = GetMenuSession()->GetSessionDbLocaleIndex();
             std::string title = pQuest->GetTitle();
-            sObjectMgr.GetQuestLocaleStrings(questID, loc_idx, &title);
+
+            int loc_idx = GetMenuSession()->GetSessionDbLocaleIndex();
+            if (loc_idx >= 0)
+            {
+                if(QuestLocale const *ql = sObjectMgr.GetQuestLocale(questID))
+                {
+                    if (ql->Title.size() > (size_t)loc_idx && !ql->Title[loc_idx].empty())
+                        title = ql->Title[loc_idx];
+                }
+            }
 
             data << uint32(questID);
             data << uint32(qmi.m_qIcon);
@@ -421,7 +440,7 @@ void PlayerMenu::SendQuestGiverStatus( uint8 questStatus, ObjectGuid npcGUID )
     DEBUG_LOG( "WORLD: Sent SMSG_QUESTGIVER_STATUS for %s", npcGUID.GetString().c_str());
 }
 
-void PlayerMenu::SendQuestGiverQuestDetails(Quest const* pQuest, ObjectGuid guid, bool ActivateAccept)
+void PlayerMenu::SendQuestGiverQuestDetails(Quest const *pQuest, ObjectGuid npcGUID, bool ActivateAccept)
 {
     std::string Title      = pQuest->GetTitle();
     std::string Details    = pQuest->GetDetails();
@@ -442,7 +461,7 @@ void PlayerMenu::SendQuestGiverQuestDetails(Quest const* pQuest, ObjectGuid guid
     }
 
     WorldPacket data(SMSG_QUESTGIVER_QUEST_DETAILS, 100);   // guess size
-    data << guid;
+    data << ObjectGuid(npcGUID);
     data << uint64(0);                                      // wotlk, something todo with quest sharing?
     data << uint32(pQuest->GetQuestId());
     data << Title;
@@ -540,7 +559,7 @@ void PlayerMenu::SendQuestGiverQuestDetails(Quest const* pQuest, ObjectGuid guid
 
     GetMenuSession()->SendPacket( &data );
 
-    DEBUG_LOG("WORLD: Sent SMSG_QUESTGIVER_QUEST_DETAILS - for %s of %s, questid = %u", GetMenuSession()->GetPlayer()->GetGuidStr().c_str(), guid.GetString().c_str(), pQuest->GetQuestId());
+    DEBUG_LOG("WORLD: Sent SMSG_QUESTGIVER_QUEST_DETAILS NPCGuid = %s, questid = %u", npcGUID.GetString().c_str(), pQuest->GetQuestId());
 }
 
 // send only static data in this packet!
