@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -132,7 +132,7 @@ struct TimeTracker
 struct ShortTimeTracker
 {
     public:
-        ShortTimeTracker(int32 expiry) : i_expiryTime(expiry) {}
+        ShortTimeTracker(int32 expiry = 0) : i_expiryTime(expiry) {}
         void Update(int32 diff) { i_expiryTime -= diff; }
         bool Passed() const { return (i_expiryTime <= 0); }
         void Reset(int32 interval) { i_expiryTime = interval; }

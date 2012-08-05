@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -327,11 +327,18 @@ void WorldSession::SendPetNameQuery(ObjectGuid petguid, uint32 petnumber)
         return;
     }
 
-    std::string name = pet->GetName();
+    char const* name = pet->GetName();
 
-    WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+4+name.size()+1));
+    // creature pets have localization like other creatures
+    if (!pet->GetOwnerGuid().IsPlayer())
+    {
+        int loc_idx = GetSessionDbLocaleIndex();
+        sObjectMgr.GetCreatureLocaleStrings(pet->GetEntry(), loc_idx, &name);
+    }
+
+    WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+4+strlen(name)+1));
     data << uint32(petnumber);
-    data << name.c_str();
+    data << name;
     data << uint32(pet->GetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP));
 
     if (pet->IsPet() && ((Pet*)pet)->GetDeclinedNames())
@@ -547,7 +554,13 @@ void WorldSession::HandlePetAbandon(WorldPacket& recv_data)
     if (Creature* pet = _player->GetMap()->GetAnyTypeCreature(guid))
     {
         if (pet->IsPet())
+        {
+            // ToDo: Fix me!
+            /*if (pet->GetObjectGuid() == _player->GetPetGuid())
+                pet->ModifyPower(POWER_HAPPINESS, -50000);*/
+                
             ((Pet*)pet)->Unsummon(PET_SAVE_AS_DELETED, _player);
+        }
         else if (pet->GetObjectGuid() == _player->GetCharmGuid())
         {
             _player->Uncharm();
